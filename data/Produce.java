@@ -3,6 +3,7 @@ package data;
 import java.io.Serializable;
 
 public class Produce implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private int ID;
 
@@ -10,6 +11,7 @@ public class Produce implements Serializable {
 
     private String masse_type;
     private double pay_masse;
+
 
     public Produce(int ID, String name, double pay_masse, String masse_type) {
         this.ID = ID;
