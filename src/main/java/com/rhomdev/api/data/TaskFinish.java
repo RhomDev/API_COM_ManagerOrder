@@ -1,9 +1,13 @@
 package src.main.java.com.rhomdev.api.data;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.Map;
 
 public class TaskFinish implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private final int ID;
     private final Task TASK;
 
@@ -16,11 +20,12 @@ public class TaskFinish implements Serializable {
      *  Constructor
      **/
 
-    public TaskFinish(int ID, Task TASK, float TIME, Worker EMPLOYEE, float DATE) {
+    public TaskFinish(int ID, Task TASK, float TIME, Worker EMPLOYEE, Map<Produce, Integer> PRODUCTION, float DATE) {
         this.ID = ID;
         this.TASK = TASK;
         this.TIME = TIME;
         this.EMPLOYEE = EMPLOYEE;
+        this.PRODUCTION = PRODUCTION;
         this.DATE = DATE;
     }
 
