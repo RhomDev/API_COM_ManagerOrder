@@ -1,8 +1,8 @@
-package data;
+package src.main.java.com.rhomdev.api.data;
 
 import java.io.Serializable;
 
-public class Employee implements Serializable {
+public class Worker{
     private final int ID;
 
     private String NAME;
@@ -13,7 +13,7 @@ public class Employee implements Serializable {
     /**
      *  Constructor
      **/
-    public Employee(int ID, String NAME, String FIRSTNAME, float HOURS) {
+    public Worker(int ID, String NAME, String FIRSTNAME, float HOURS) {
         this.ID = ID;
         this.NAME = NAME;
         this.FIRSTNAME = FIRSTNAME;
@@ -50,5 +50,10 @@ public class Employee implements Serializable {
 
     public void setHOURS(float HOURS) {
         this.HOURS = HOURS;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("{\"ID\": %d , \"name\": %s,\"firstname\": %s ,\"hours\": %f}", ID, NAME, FIRSTNAME, HOURS);
     }
 }

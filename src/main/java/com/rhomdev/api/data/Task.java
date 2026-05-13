@@ -1,4 +1,4 @@
-package data;
+package src.main.java.com.rhomdev.api.data;
 
 import java.io.Serializable;
 import java.util.Calendar;
@@ -46,6 +46,55 @@ public class Task implements Serializable {
         this.TIME = TIME;
 
         this.VALID = false;
+    }
+    public Task(String json) {
+
+        json = json.trim();
+        json = json.substring(1, json.length() - 1); // enlève { }
+
+        String[] fields = json.split(",");
+
+        int id = 0;
+        int idType = 0;
+        long date = 0;
+        String place = "";
+        float time = 0;
+        boolean valid = false;
+
+        for (String field : fields) {
+            String[] pair = field.split(":", 2);
+
+            String key = pair[0].replace("\"", "").trim();
+            String value = pair[1].replace("\"", "").trim();
+
+            switch (key) {
+                case "ID":
+                    id = Integer.parseInt(value);
+                    break;
+                case "ID_TYPE":
+                    idType = Integer.parseInt(value);
+                    break;
+                case "date":
+                    date = Long.parseLong(value);
+                    break;
+                case "place":
+                    place = value;
+                    break;
+                case "time":
+                    time = Float.parseFloat(value);
+                    break;
+                case "valide":
+                    valid = Boolean.parseBoolean(value);
+                    break;
+            }
+        }
+
+        this.ID = id;
+        this.ID_TYPE = idType;
+        this.DATE = date;
+        this.PLACE = place;
+        this.TIME = time;
+        this.VALID = valid;
     }
 
     /**
@@ -106,5 +155,13 @@ public class Task implements Serializable {
     public void setVALID(int VALID) {
         if (VALID == 1) this.VALID = true;
         else this.VALID = false;
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "{\"ID\": %d, \"ID_TYPE\": %d, \"date\": %d, \"place\": \"%s\", \"time\": %f, \"valide\": %b}",
+                ID, ID_TYPE, DATE, PLACE, TIME, VALID
+        );
     }
 }

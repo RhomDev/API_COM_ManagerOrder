@@ -1,4 +1,4 @@
-package data;
+package src.main.java.com.rhomdev.api.data;
 
 import java.io.Serializable;
 

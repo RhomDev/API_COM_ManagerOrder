@@ -1,7 +1,9 @@
-import data.Employee;
-import data.Produce;
-import data.Task;
-import data.TaskFinish;
+package src.main.java.com.rhomdev.api;
+
+import src.main.java.com.rhomdev.api.data.Produce;
+import src.main.java.com.rhomdev.api.data.Task;
+import src.main.java.com.rhomdev.api.data.TaskFinish;
+import src.main.java.com.rhomdev.api.data.Worker;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -13,7 +15,7 @@ import java.util.List;
 
 public class API_COM{
 
-    public class Serveur extends Thread{
+    public static class Serveur extends Thread{
         private int _PORT;
         private Socket clientSocket;
 
@@ -25,7 +27,7 @@ public class API_COM{
 
         private List<Task> Data_Task;
         private List<TaskFinish> Data_TaskFinish;
-        private List<Employee> Data_Employee;
+        private List<Worker> Data_Worker;
         private List<Produce> Data_Consu_Prod;
         private List<Task> Data_TaskLoad;
 
@@ -45,7 +47,7 @@ public class API_COM{
             this._PORT = port;
             Data_Task = new ArrayList<>();
             Data_TaskFinish = new ArrayList<>();
-            Data_Employee = new ArrayList<>();
+            Data_Worker = new ArrayList<>();
             Data_Consu_Prod = new ArrayList<>();
             Data_TaskLoad = new ArrayList<>();
         }
@@ -58,7 +60,8 @@ public class API_COM{
                 out.flush();
                 in = new ObjectInputStream(clientSocket.getInputStream());
                 while (true) {
-                    switch (cmd) {
+                    if (cmd != null) {
+                        switch (cmd) {
                         case TASK_LOAD_READ -> read_data_task_load();
                         case TASK_LOAD_UPDATE -> update_data_task_load();
                         case TASK_FINISH_READ -> read_data_task_finish();
@@ -67,11 +70,11 @@ public class API_COM{
                         case CONSU_PROD_UPDATE -> update_data_consu_prod();
                         case WORKER_READ -> read_data_worker();
                         case WORKER_UPDATE -> update_data_worker();
-                        case null, default -> {}
+                        }
                     }
                     Thread.sleep(100); // Petite pause pour éviter une boucle trop rapide
                 }
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         }
@@ -84,7 +87,7 @@ public class API_COM{
                 String response = (String) in.readObject();
                 if ("READY".equals(response)) {
                     // Envoyer les données à mettre à jour
-                    out.writeObject(getData_Employee());
+                    out.writeObject(getData_Worker());
                     cmd = null; // Réinitialiser la commande après l'opération
                 }
             } catch (Exception e) {
@@ -98,7 +101,7 @@ public class API_COM{
                     out.writeObject("REQUEST_WORKER_READ");
                     // Recevoir la liste de données : Produce, Integer, Long
                     @SuppressWarnings("unchecked")
-                    List<Employee> receivedData = (List<Employee>) in.readObject();
+                    List<Worker> receivedData = (List<Worker>) in.readObject();
                     setData_Worker(receivedData);
                     cmd = null; // Réinitialiser la commande après l'opération
                 } catch (Exception e) {
@@ -205,8 +208,8 @@ public class API_COM{
             return Data_TaskFinish;
         }
 
-        public List<Employee> getData_Worker() {
-            return Data_Employee;
+        public List<Worker> getData_Worker() {
+            return Data_Worker;
         }
 
         public List<Task> getData_TaskLoad() {
@@ -226,8 +229,8 @@ public class API_COM{
             Data_TaskFinish = data_TaskFinish;
         }
 
-        public void setData_Worker(List<Employee> data_Worker) {
-            Data_Employee = data_Worker;
+        public void setData_Worker(List<Worker> data_Worker) {
+            Data_Worker = data_Worker;
         }
 
         public void setData_Consu_Prod(List<Produce> data_Consu_Prod) {
@@ -247,111 +250,113 @@ public class API_COM{
         }
     }
 
-    public class Client {
+    public static class Client extends Thread {
+        /**
+         * Interface pour permettre au client de déléguer la gestion des données 
+         * (ex: vers une base de données dans un autre programme).
+         */
+        public interface DataHandler {
+            List<Task> getTasks() throws Exception;
+            void updateTasks(List<Task> tasks) throws Exception;
+            List<TaskFinish> getTasksFinish() throws Exception;
+            void updateTasksFinish(List<TaskFinish> tasks) throws Exception;
+            List<Worker> getWorkers() throws Exception;
+            void updateWorkers(List<Worker> workers) throws Exception;
+            List<Produce> getConsuProd() throws Exception;
+            void updateConsuProd(List<Produce> items) throws Exception;
+        }
+
         private Socket serverSocket;
         private ObjectInputStream in;
         private ObjectOutputStream out;
+        private final DataHandler dataHandler;
 
-        private List<Task> Data_Task;
-        private List<TaskFinish> Data_TaskFinish;
-        private List<Employee> Data_Employee;
-        private List<Produce> Data_Consu_Prod;
-
-        public Client(String host, int port) {
+        public Client(String host, int port, DataHandler handler) {
+            this.dataHandler = handler;
             try {
                 serverSocket = new Socket(host, port);
                 out = new ObjectOutputStream(serverSocket.getOutputStream());
                 out.flush();
                 in = new ObjectInputStream(serverSocket.getInputStream());
-
-                Data_Task = new ArrayList<>();
-                Data_TaskFinish = new ArrayList<>();
-                Data_Employee = new ArrayList<>();
-                Data_Consu_Prod = new ArrayList<>();
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
+        @Override
         public void run() {
+            // Vérification pour éviter NullPointerException si la connexion a échoué au départ
+            if (serverSocket == null || in == null || out == null) {
+                System.err.println("Client non initialisé (problème de connexion).");
+                return;
+            }
+
             try {
-                while (true) {
-                    String request = (String) in.readObject();
+                while (!Thread.currentThread().isInterrupted()) {
+                    Object obj = in.readObject();
+                    if (!(obj instanceof String)) continue;
+                    String request = (String) obj;
+
                     switch (request) {
                         case "REQUEST_TASK_LOAD_READ" -> {
-                            out.writeObject(getData_Task());
+                            List<Task> data = dataHandler.getTasks();
+                            out.writeObject(data != null ? data : new ArrayList<Task>());
                         }
                         case "REQUEST_TASK_LOAD_UPDATE" -> {
                             out.writeObject("READY");
+                            out.flush();
                             @SuppressWarnings("unchecked")
                             List<Task> received = (List<Task>) in.readObject();
-                            setData_Task(received);
+                            dataHandler.updateTasks(received);
                         }
                         case "REQUEST_TASK_FINISH_READ" -> {
-                            out.writeObject(getData_TaskFinish());
+                            List<TaskFinish> data = dataHandler.getTasksFinish();
+                            out.writeObject(data != null ? data : new ArrayList<TaskFinish>());
                         }
                         case "REQUEST_TASK_FINISH_UPDATE" -> {
                             out.writeObject("READY");
+                            out.flush();
                             @SuppressWarnings("unchecked")
                             List<TaskFinish> received = (List<TaskFinish>) in.readObject();
-                            setData_TaskFinish(received);
+                            dataHandler.updateTasksFinish(received);
                         }
                         case "REQUEST_CONSU_PROD_READ" -> {
-                            out.writeObject(getData_Consu_Prod());
+                            List<Produce> data = dataHandler.getConsuProd();
+                            out.writeObject(data != null ? data : new ArrayList<Produce>());
                         }
                         case "REQUEST_CONSU_PROD_UPDATE" -> {
                             out.writeObject("READY");
+                            out.flush();
                             @SuppressWarnings("unchecked")
                             List<Produce> received = (List<Produce>) in.readObject();
-                            setData_Consu_Prod(received);
+                            dataHandler.updateConsuProd(received);
                         }
                         case "REQUEST_WORKER_READ" -> {
-                            out.writeObject(getData_Employee());
+                            List<Worker> data = dataHandler.getWorkers();
+                            out.writeObject(data != null ? data : new ArrayList<Worker>());
                         }
                         case "REQUEST_WORKER_UPDATE" -> {
                             out.writeObject("READY");
+                            out.flush();
                             @SuppressWarnings("unchecked")
-                            List<Employee> received = (List<Employee>) in.readObject();
-                            setData_Employee(received);
+                            List<Worker> received = (List<Worker>) in.readObject();
+                            dataHandler.updateWorkers(received);
                         }
                     }
+                    out.flush();
                 }
             } catch (Exception e) {
-                e.printStackTrace();
+                System.err.println("Client communication error: " + e.getMessage());
+            } finally {
+                // Fermeture manuelle plus sécurisée et compatible
+                try {
+                    if (in != null) in.close();
+                    if (out != null) out.close();
+                    if (serverSocket != null) serverSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
-
-        public List<Task> getData_Task() {
-            return Data_Task;
-        }
-
-        public List<TaskFinish> getData_TaskFinish() {
-            return Data_TaskFinish;
-        }
-
-        public List<Employee> getData_Employee() {
-            return Data_Employee;
-        }
-
-        public List<Produce> getData_Consu_Prod() {
-            return Data_Consu_Prod;
-        }
-
-        public void setData_Task(List<Task> data_Task) {
-            Data_Task = data_Task;
-        }
-
-        public void setData_TaskFinish(List<TaskFinish> data_TaskFinish) {
-            Data_TaskFinish = data_TaskFinish;
-        }
-
-        public void setData_Employee(List<Employee> data_Employee) {
-            Data_Employee = data_Employee;
-        }
-
-        public void setData_Consu_Prod(List<Produce> data_Consu_Prod) {
-            Data_Consu_Prod = data_Consu_Prod;
-        }
     }
-
 }
