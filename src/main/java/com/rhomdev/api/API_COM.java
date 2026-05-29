@@ -32,7 +32,7 @@ public class API_COM{
         private List<Task> Data_TaskLoad;
 
 
-        enum RequestType {
+        public enum RequestType {
             TASK_LOAD_READ,
             TASK_LOAD_UPDATE,
             TASK_FINISH_READ,
